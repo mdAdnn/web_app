@@ -12,6 +12,8 @@ def process_jsonb_columns(df):
     return df
 
 def main():
+    # Set page title
+    st.title("CPIC Database Explorer")
     try:
         conn = init_connection()
         cur = conn.cursor()
