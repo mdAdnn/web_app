@@ -65,8 +65,20 @@ def main():
             # Process JSONB columns
             df_result = process_jsonb_columns(df_result)
 
-            # Display the result without curly braces
-            st.write(df_result)
+            # Check if there are results to add to the HTML report
+            if not df_result.empty:
+                # Add the result DataFrame to the HTML report with styling to fit the page
+                html_report = f"<a name='{selected_gene_symbol}_{selected_diplotypes}'></a>\n"
+                html_report += f"<h3>Results for Genesymbol: {selected_gene_symbol}, Diplotype: {selected_diplotypes}</h3>\n"
+                html_report += "<div style='overflow-x:auto;'>\n"
+                html_report += df_result.to_html(index=False, escape=False, classes='report-table', table_id='report-table') + "\n"
+                html_report += "</div>\n"
+                
+                # Display the HTML report
+                st.markdown(html_report, unsafe_allow_html=True)
+            else:
+                st.warning(f"No results found for Genesymbol: {selected_gene_symbol}, Diplotype: {selected_diplotypes}")
+            
 
     except Exception as e:
         st.error(f"Error: {str(e)}")
@@ -78,3 +90,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
