@@ -80,6 +80,14 @@ def main():
                 st.markdown(html_report, unsafe_allow_html=True)
             else:
                 st.warning(f"No results found for Genesymbol: {selected_gene_symbol}, Diplotype: {selected_diplotypes}")
+
+            #download the report
+            st.download_button(
+                label="Download Report",
+                data="",
+                file_name=f"report_{selected_gene_symbol}_{selected_diplotypes}.pdf",
+                mime="application/pdf",
+                )
             
 
     except Exception as e:
