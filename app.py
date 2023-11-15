@@ -12,40 +12,115 @@ def process_jsonb_columns(df):
             df[col] = df[col].apply(lambda x: ', '.join([f"{k}: {v}" for k, v in x.items()]))
     return df
 
-def execute_query(genesymbol, diplotype):
-    # Construct the SQL query using the provided genesymbol and diplotype
-    sql_query = f"""
-        SELECT DISTINCT ON (p.drugid)
-            dp.*,
-            p.drugid,
-            dr.name,
-            r.drugrecommendation,
-            r.classification
-        FROM cpic.gene_result_diplotype d
-        JOIN cpic.gene_result_lookup l ON d.functionphenotypeid = l.id
-        JOIN cpic.gene_result gr ON l.phenotypeid = gr.id
-        JOIN cpic.pair p ON gr.genesymbol = p.genesymbol
-        JOIN cpic.drug dr ON p.drugid = dr.drugid
-        JOIN cpic.recommendation r ON dr.drugid = r.drugid
-        JOIN cpic.diplotype_phenotype dp ON r.phenotypes = dp.phenotype
-        WHERE dp.diplotype ->> '{genesymbol}' = '{diplotype}'
-        AND r.classification <> 'No Recommendation'
-        AND r.drugrecommendation <> 'No recommendation'
-        ORDER BY p.drugid, r.classification;
-    """
+def execute_custom_query(selected_gene_symbol, selected_diplotypes, selected_drug):
+    print(f"Selected Gene Symbol: {selected_gene_symbol}")
+    print(f"Selected Diplotypes: {selected_diplotypes}")
+    print(f"Selected Drug: {selected_drug}")
+    
+    if selected_gene_symbol == "None" and selected_diplotypes == "None" and selected_drug == "None":
+        # Return all data if "None" is selected in all dropdowns
+        sql_query = f"""
+            SELECT DISTINCT ON (p.drugid)
+                dp.*,
+                p.drugid,
+                dr.name,
+                r.drugrecommendation,
+                r.classification
+            FROM cpic.gene_result_diplotype d
+            JOIN cpic.gene_result_lookup l ON d.functionphenotypeid = l.id
+            JOIN cpic.gene_result gr ON l.phenotypeid = gr.id
+            JOIN cpic.pair p ON gr.genesymbol = p.genesymbol
+            JOIN cpic.drug dr ON p.drugid = dr.drugid
+            JOIN cpic.recommendation r ON dr.drugid = r.drugid
+            JOIN cpic.diplotype_phenotype dp ON r.phenotypes = dp.phenotype
+            WHERE r.classification <> 'No Recommendation'
+                AND r.drugrecommendation <> 'No recommendation'
+            ORDER BY p.drugid, r.classification;
+        """
+    elif selected_gene_symbol and selected_diplotypes and selected_drug:
+        # Construct the SQL query for gene symbol, diplotypes, and drug
+        sql_query = f"""
+            SELECT DISTINCT ON (p.drugid)
+                dp.*,
+                p.drugid,
+                dr.name,
+                r.drugrecommendation,
+                r.classification
+            FROM cpic.gene_result_diplotype d
+            JOIN cpic.gene_result_lookup l ON d.functionphenotypeid = l.id
+            JOIN cpic.gene_result gr ON l.phenotypeid = gr.id
+            JOIN cpic.pair p ON gr.genesymbol = p.genesymbol
+            JOIN cpic.drug dr ON p.drugid = dr.drugid
+            JOIN cpic.recommendation r ON dr.drugid = r.drugid
+            JOIN cpic.diplotype_phenotype dp ON r.phenotypes = dp.phenotype
+            WHERE dp.diplotype ->> '{selected_gene_symbol}' = '{selected_diplotypes}'
+                AND dr.name = '{selected_drug}'
+                AND r.classification <> 'No Recommendation'
+                AND r.drugrecommendation <> 'No recommendation'
+            ORDER BY p.drugid, r.classification;
+        """
+    elif selected_drug:
+        # Construct the SQL query for drug name
+        sql_query = f"""
+            SELECT DISTINCT ON (p.drugid)
+                dp.*,
+                p.drugid,
+                dr.name,
+                r.drugrecommendation,
+                r.classification
+            FROM cpic.gene_result_diplotype d
+            JOIN cpic.gene_result_lookup l ON d.functionphenotypeid = l.id
+            JOIN cpic.gene_result gr ON l.phenotypeid = gr.id
+            JOIN cpic.pair p ON gr.genesymbol = p.genesymbol
+            JOIN cpic.drug dr ON p.drugid = dr.drugid
+            JOIN cpic.recommendation r ON dr.drugid = r.drugid
+            JOIN cpic.diplotype_phenotype dp ON r.phenotypes = dp.phenotype
+            WHERE dr.name = '{selected_drug}'
+                AND r.classification <> 'No Recommendation'
+                AND r.drugrecommendation <> 'No recommendation'
+            ORDER BY p.drugid, r.classification;
+        """
+    elif selected_gene_symbol and selected_diplotypes:
+        # Construct the SQL query for gene symbol and diplotypes
+        sql_query = f"""
+            SELECT DISTINCT ON (p.drugid)
+                dp.*,
+                p.drugid,
+                dr.name,
+                r.drugrecommendation,
+                r.classification
+            FROM cpic.gene_result_diplotype d
+            JOIN cpic.gene_result_lookup l ON d.functionphenotypeid = l.id
+            JOIN cpic.gene_result gr ON l.phenotypeid = gr.id
+            JOIN cpic.pair p ON gr.genesymbol = p.genesymbol
+            JOIN cpic.drug dr ON p.drugid = dr.drugid
+            JOIN cpic.recommendation r ON dr.drugid = r.drugid
+            JOIN cpic.diplotype_phenotype dp ON r.phenotypes = dp.phenotype
+            WHERE dp.diplotype ->> '{selected_gene_symbol}' = '{selected_diplotypes}'
+                AND r.classification <> 'No Recommendation'
+                AND r.drugrecommendation <> 'No recommendation'
+            ORDER BY p.drugid, r.classification;
+        """
+    else:
+        # Handle other cases or provide a default query
+        sql_query = ""
 
     # Execute the SQL query
-    conn = init_connection()
-    cur = conn.cursor()
-    cur.execute(sql_query)
+    if sql_query:
+        conn = init_connection()
+        cur = conn.cursor()
+        cur.execute(sql_query)
 
-    # Fetch the results
-    result = cur.fetchall()
+        # Fetch the results
+        result = cur.fetchall()
 
-    # Convert the results to a Pandas DataFrame
-    df = pd.DataFrame(result, columns=[desc[0] for desc in cur.description])
+        # Convert the results to a Pandas DataFrame
+        df = pd.DataFrame(result, columns=[desc[0] for desc in cur.description])
 
-    return df
+        return df
+    else:
+        return pd.DataFrame()  # Return an empty DataFrame if no query is selected
+
 
 def main():
     try:
@@ -54,7 +129,7 @@ def main():
         
         # Query to get all unique gene symbols from cpic.gene_result table
         cur.execute("SELECT DISTINCT genesymbol FROM cpic.gene_result")
-        gene_symbols = [row[0] for row in cur.fetchall()]
+        gene_symbols = ["None"] + [row[0] for row in cur.fetchall()]
 
         # Create the first dropdown for gene symbols
         selected_gene_symbol = st.sidebar.selectbox("Select Gene Symbol", gene_symbols)
@@ -66,54 +141,35 @@ def main():
         # Create the second dropdown for simplified diplotypes related to the selected gene symbol
         selected_diplotypes = st.sidebar.selectbox("Select Diplotypes", diplotypes)
 
+        # Create third dropdown for drugs
+        cur.execute("SELECT DISTINCT name FROM cpic.drug")
+        drugs = ["None"] + [row[0] for row in cur.fetchall()]
+        selected_drug = st.sidebar.selectbox("Select Drug", drugs)
+        
         # Add a submit button
         if st.sidebar.button("Submit"):
-            # Construct and execute the query using selected values
-            query = f"""
-                SELECT DISTINCT ON (p.drugid)
-                    dp.*,
-                    p.drugid,
-                    dr.name,
-                    r.drugrecommendation,
-                    r.classification
-                FROM cpic.gene_result_diplotype d
-                JOIN cpic.gene_result_lookup l ON d.functionphenotypeid = l.id
-                JOIN cpic.gene_result gr ON l.phenotypeid = gr.id
-                JOIN cpic.pair p ON gr.genesymbol = p.genesymbol
-                JOIN cpic.drug dr ON p.drugid = dr.drugid
-                JOIN cpic.recommendation r ON dr.drugid = r.drugid
-                JOIN cpic.diplotype_phenotype dp ON r.phenotypes = dp.phenotype
-                WHERE dp.diplotype ->> '{selected_gene_symbol}' = '{selected_diplotypes}'
-                AND r.classification <> 'No Recommendation'
-                AND r.drugrecommendation <> 'No recommendation'
-                ORDER BY p.drugid, r.classification;
-            """
-            # Execute the query and display the result
-            cur.execute(query)
-            result = cur.fetchall()
+            # Execute the custom query with the selected drug name
+            result_df = execute_custom_query(selected_gene_symbol, selected_diplotypes, selected_drug)
 
-            # Get column names
-            col_names = [desc[0] for desc in cur.description]
-
-            # Create a DataFrame from the result
-            df_result = pd.DataFrame(result, columns=col_names)
-
-            # Process JSONB columns
-            df_result = process_jsonb_columns(df_result)
+            # Check if the DataFrame is not empty before processing
+            if not result_df.empty:
+                # Process JSONB columns
+                result_df = process_jsonb_columns(result_df)
 
             # Check if there are results to add to the HTML report
-            if not df_result.empty:
+            if not result_df.empty:
                 # Add the result DataFrame to the HTML report with styling to fit the page
                 html_report = f"<a name='{selected_gene_symbol}_{selected_diplotypes}'></a>\n"
                 html_report += f"<h3>Results for Genesymbol: {selected_gene_symbol}, Diplotype: {selected_diplotypes}</h3>\n"
                 html_report += "<div style='overflow-x:auto;'>\n"
-                html_report += df_result.to_html(index=False, escape=False, classes='report-table', table_id='report-table', justify='center') + "\n"
+                html_report += result_df.to_html(index=False, escape=False, classes='report-table', table_id='report-table', justify='center') + "\n"
                 html_report += "</div>\n"
-                
+
                 # Display the HTML report
                 st.markdown(html_report, unsafe_allow_html=True)
             else:
                 st.warning(f"No results found for Genesymbol: {selected_gene_symbol}, Diplotype: {selected_diplotypes}")
+
 
     except Exception as e:
         st.error(f"Error: {str(e)}")
