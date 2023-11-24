@@ -19,25 +19,8 @@ def execute_custom_query(selected_gene_symbol, selected_diplotypes, selected_dru
     
     if selected_gene_symbol == "None" and selected_diplotypes == "None" and selected_drug == "None":
         # Return all data if "None" is selected in all dropdowns
-        sql_query = f"""
-            SELECT DISTINCT ON (p.drugid)
-                dp.*,
-                p.drugid,
-                dr.name,
-                r.drugrecommendation,
-                r.classification
-            FROM cpic.gene_result_diplotype d
-            JOIN cpic.gene_result_lookup l ON d.functionphenotypeid = l.id
-            JOIN cpic.gene_result gr ON l.phenotypeid = gr.id
-            JOIN cpic.pair p ON gr.genesymbol = p.genesymbol
-            JOIN cpic.drug dr ON p.drugid = dr.drugid
-            JOIN cpic.recommendation r ON dr.drugid = r.drugid
-            JOIN cpic.diplotype_phenotype dp ON r.phenotypes = dp.phenotype
-            WHERE r.classification <> 'No Recommendation'
-                AND r.drugrecommendation <> 'No recommendation'
-            ORDER BY p.drugid, r.classification;
-        """
-    elif selected_gene_symbol and selected_diplotypes and selected_drug:
+        print("No input selected")
+    elif selected_gene_symbol and selected_diplotypes and selected_drug and selected_drug != "None":
         # Construct the SQL query for gene symbol, diplotypes, and drug
         sql_query = f"""
             SELECT DISTINCT ON (p.drugid)
@@ -59,29 +42,8 @@ def execute_custom_query(selected_gene_symbol, selected_diplotypes, selected_dru
                 AND r.drugrecommendation <> 'No recommendation'
             ORDER BY p.drugid, r.classification;
         """
-    elif selected_drug:
-        # Construct the SQL query for drug name
-        sql_query = f"""
-            SELECT DISTINCT ON (p.drugid)
-                dp.*,
-                p.drugid,
-                dr.name,
-                r.drugrecommendation,
-                r.classification
-            FROM cpic.gene_result_diplotype d
-            JOIN cpic.gene_result_lookup l ON d.functionphenotypeid = l.id
-            JOIN cpic.gene_result gr ON l.phenotypeid = gr.id
-            JOIN cpic.pair p ON gr.genesymbol = p.genesymbol
-            JOIN cpic.drug dr ON p.drugid = dr.drugid
-            JOIN cpic.recommendation r ON dr.drugid = r.drugid
-            JOIN cpic.diplotype_phenotype dp ON r.phenotypes = dp.phenotype
-            WHERE dr.name = '{selected_drug}'
-                AND r.classification <> 'No Recommendation'
-                AND r.drugrecommendation <> 'No recommendation'
-            ORDER BY p.drugid, r.classification;
-        """
     elif selected_gene_symbol and selected_diplotypes:
-        # Construct the SQL query for gene symbol and diplotypes
+        # Construct the SQL query for gene symbol and diplotypes without filtering by drug name
         sql_query = f"""
             SELECT DISTINCT ON (p.drugid)
                 dp.*,
@@ -100,6 +62,20 @@ def execute_custom_query(selected_gene_symbol, selected_diplotypes, selected_dru
                 AND r.classification <> 'No Recommendation'
                 AND r.drugrecommendation <> 'No recommendation'
             ORDER BY p.drugid, r.classification;
+        """
+    elif selected_drug:
+        sql_query = f"""
+            select distinct d.name,
+	            d.drugid,
+	            r.drugrecommendation,
+	            r.classification,
+	            r.phenotypes
+            from cpic.drug d
+            join cpic.recommendation r on d.drugid = r.drugid
+            where name = '{selected_drug}'
+            AND r.classification <> 'No Recommendation'
+            AND r.drugrecommendation <> 'No recommendation'
+            ORDER BY d.drugid, r.classification;
         """
     else:
         # Handle other cases or provide a default query
@@ -220,7 +196,7 @@ if uploaded_file is not None:
             genesymbol, diplotype = pair          
 
             # Execute the SQL query with the provided genesymbol and diplotype
-            result_df = execute_query(genesymbol.strip(), diplotype.strip())
+            result_df = execute_custom_query(genesymbol.strip(), diplotype.strip())
 
             # Check if the DataFrame is not empty before processing
             if not result_df.empty:
