@@ -142,10 +142,9 @@ def main():
 
                 # Display the HTML report
                 st.markdown(html_report, unsafe_allow_html=True)
-
+            
             else:
                 st.warning(f"No results found for Genesymbol: {selected_gene_symbol}, Diplotype: {selected_diplotypes}")
-
 
     except Exception as e:
         st.error(f"Error: {str(e)}")
@@ -179,21 +178,32 @@ if uploaded_file is not None:
     user_id = lines[1].split(':')[-1].strip()
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+    # Initialize the HTML string
+    html_report = ""
+
+    # Assume the file content contains genesymbol and diplotype separated by a comma
+    pairs = [line.split(',') for line in lines[3:]]
+
+    queried_genes = []  # Move the initialization here
+
     # Display name, id, and timestamp at the top
     st.write(f"Name: {name}")
     st.write(f"ID: {user_id}")
     st.write(f"Timestamp: {timestamp}")
 
-    # Assume the file content contains genesymbol and diplotype separated by a comma
-    pairs = [line.split(',') for line in lines[3:]]
+    # Initialize a list to store gene symbols with strong classification
+    strong_classification_genes = []
 
-    # Initialize the HTML string
-    html_report = ""
+    # Display the heading outside the loop
+    st.write("**Queries with Strong Classification:**")
+
+    # Create a list to store anchor links for strong classifications
+    anchor_links = []
 
     for idx, pair in enumerate(pairs, start=1):
         # Check if the pair contains both genesymbol and diplotype
         if len(pair) == 2:
-            genesymbol, diplotype = pair          
+            genesymbol, diplotype = pair
 
             # Execute the SQL query with the provided genesymbol and diplotype
             result_df = execute_custom_query(genesymbol.strip(), diplotype.strip(), selected_drug="None")
@@ -205,22 +215,27 @@ if uploaded_file is not None:
                     if isinstance(result_df[col][0], dict):
                         result_df[col] = result_df[col].apply(lambda x: ', '.join([f"{k}: {v}" for k, v in x.items()]))
 
-                result_df.index += 1
-                
-                # Add the result DataFrame to the HTML report
-                html_report += f"<a name='{genesymbol}_{diplotype}'></a>\n"
-                html_report += f"<h3>Results for {genesymbol}, {diplotype}</h3>\n"
-                html_report += result_df.to_html(index=False, escape=False, classes='report-table', table_id='report-table', justify='center') + "\n"
+                # Add an anchor for the result
+                html_report += f"<a name='result_{genesymbol}_{diplotype}'></a>\n"
 
+                # Add the result DataFrame to the HTML report
+                html_report += f"<h3>Results for {genesymbol}, {diplotype}</h3>\n"
+                html_report += result_df.to_html(index=False, escape=False, classes='report-table', table_id=f'report-table-{genesymbol}_{diplotype}', justify='center') + "\n"
+
+                # Check if the classification is strong
+                if "Strong" in result_df["classification"].values:
+                    # Display the queried genesymbol and diplotype with strong classification
+                    st.write(f"- [{genesymbol} {diplotype}](#result_{genesymbol}_{diplotype})")
                 
-            else:
-                st.warning(f"No results found for Genesymbol: {genesymbol}, Diplotype: {diplotype}")
+                    # Add the gene symbol and diplotype as a tuple to the list
+                    strong_classification_genes.append((genesymbol, diplotype))
 
     # Display the entire HTML report
     st.markdown(html_report, unsafe_allow_html=True)
     st.write("#")
     # End the report with reduced font size
     st.write("###### End of Report")
+
     label = r'''
     $\text {
         \scriptsize Genotypes were called using Aldy, Actionable drug interactions were collected from CPIC database.
@@ -230,3 +245,6 @@ if uploaded_file is not None:
 
 if __name__ == '__main__':
     main()
+    # ...
+
+
