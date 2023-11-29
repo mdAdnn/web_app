@@ -97,7 +97,6 @@ def execute_custom_query(selected_gene_symbol, selected_diplotypes, selected_dru
     else:
         return pd.DataFrame()  # Return an empty DataFrame if no query is selected
 
-
 def main():
     try:
         conn = init_connection()
@@ -136,13 +135,14 @@ def main():
             if not result_df.empty:
                 # Add the result DataFrame to the HTML report with styling to fit the page
                 html_report = f"<a name='{selected_gene_symbol}_{selected_diplotypes}'></a>\n"
-                html_report += f"<h3>Results for Genesymbol: {selected_gene_symbol}, Diplotype: {selected_diplotypes}</h3>\n"
+                html_report += f"<h3>Results for  {selected_gene_symbol}, {selected_diplotypes}</h3>\n"
                 html_report += "<div style='overflow-x:auto;'>\n"
                 html_report += result_df.to_html(index=False, escape=False, classes='report-table', table_id='report-table', justify='center') + "\n"
                 html_report += "</div>\n"
 
                 # Display the HTML report
                 st.markdown(html_report, unsafe_allow_html=True)
+
             else:
                 st.warning(f"No results found for Genesymbol: {selected_gene_symbol}, Diplotype: {selected_diplotypes}")
 
@@ -196,7 +196,7 @@ if uploaded_file is not None:
             genesymbol, diplotype = pair          
 
             # Execute the SQL query with the provided genesymbol and diplotype
-            result_df = execute_custom_query(genesymbol.strip(), diplotype.strip())
+            result_df = execute_custom_query(genesymbol.strip(), diplotype.strip(), selected_drug="None")
 
             # Check if the DataFrame is not empty before processing
             if not result_df.empty:
@@ -209,8 +209,10 @@ if uploaded_file is not None:
                 
                 # Add the result DataFrame to the HTML report
                 html_report += f"<a name='{genesymbol}_{diplotype}'></a>\n"
-                html_report += f"<h3>Results for Genesymbol: {genesymbol}, Diplotype: {diplotype}</h3>\n"
-                html_report += result_df.to_html(index=False, escape=False) + "\n"
+                html_report += f"<h3>Results for {genesymbol}, {diplotype}</h3>\n"
+                html_report += result_df.to_html(index=False, escape=False, classes='report-table', table_id='report-table', justify='center') + "\n"
+
+                
             else:
                 st.warning(f"No results found for Genesymbol: {genesymbol}, Diplotype: {diplotype}")
 
