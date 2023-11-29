@@ -209,8 +209,8 @@ if uploaded_file is not None:
                 
                 # Add the result DataFrame to the HTML report
                 html_report += f"<a name='{genesymbol}_{diplotype}'></a>\n"
-                html_report += f"<h3>Results for Genesymbol: {genesymbol}, Diplotype: {diplotype}</h3>\n"
-                html_report += result_df.to_html(index=False, escape=False) + "\n"
+                html_report += f"<h3>Results for {genesymbol}, {diplotype}</h3>\n"
+                html_report += result_df.to_html(index=False, escape=False, classes='report-table', table_id='report-table', justify='center') + "\n"
 
                 
             else:
